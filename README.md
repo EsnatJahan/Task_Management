@@ -41,7 +41,7 @@ Task Management enables users to create and manage multiple workspaces/projects,
 | **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide React icons |
 | **Backend** | Node.js, Express 5, CORS, dotenv |
 | **Database & ORM** | PostgreSQL, Prisma ORM 6 |
-| **DevOps / Packaging**| Docker, Docker Compose, Windows Batch (`start.bat`), Shell script (`start.sh`) |
+
 
 ---
 
