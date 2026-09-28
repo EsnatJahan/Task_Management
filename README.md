@@ -72,8 +72,6 @@ Task_Management/
 │   ├── Dockerfile                # Multi-stage frontend container configuration
 │   └── package.json
 ├── docker-compose.yml            # Full-stack Docker orchestration
-├── start.bat                     # 1-click startup script for Windows
-├── start.sh                      # Startup script for Linux/macOS
 └── README.md
 ```
 
