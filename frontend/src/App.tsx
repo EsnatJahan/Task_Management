@@ -6,7 +6,14 @@ import TaskList from "./components/TaskList";
 import CreateTaskModal from "./components/CreateTaskModal";
 import EditTaskModal from "./components/EditTaskModal";
 import { api, type Project, type Task, type Priority, type Status } from "./api";
-import { FolderPlus, Loader2, AlertCircle } from "lucide-react";
+import {
+  FolderPlus,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  Menu,
+  X,
+} from "lucide-react";
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -16,10 +23,19 @@ function App() {
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  const showSuccess = (msg: string) => {
+    setSuccessMessage(msg);
+    setTimeout(() => {
+      setSuccessMessage((prev) => (prev === msg ? null : prev));
+    }, 3500);
+  };
 
   // Load all projects
   const loadProjects = useCallback(async (selectIdAfterLoad?: number) => {
@@ -82,9 +98,10 @@ function App() {
       const newProject = await api.createProject(name, description);
       await loadProjects(newProject.id);
       setIsCreateProjectOpen(false);
+      showSuccess(`Project "${newProject.name}" created successfully!`);
     } catch (err: unknown) {
       console.error("Error creating project:", err);
-      alert("Failed to create project. Please try again.");
+      setError("Failed to create project. Please try again.");
     }
   };
 
@@ -96,11 +113,13 @@ function App() {
     if (!confirmDelete) return;
 
     try {
+      const projectName = selectedProject.name;
       await api.deleteProject(selectedProject.id);
       await loadProjects();
+      showSuccess(`Project "${projectName}" deleted successfully.`);
     } catch (err: unknown) {
       console.error("Error deleting project:", err);
-      alert("Failed to delete project. Please try again.");
+      setError("Failed to delete project. Please try again.");
     }
   };
 
@@ -123,9 +142,10 @@ function App() {
       setIsCreateTaskOpen(false);
       await loadTasks(selectedProjectId);
       await loadProjects(selectedProjectId);
+      showSuccess("Task created successfully!");
     } catch (err: unknown) {
       console.error("Error creating task:", err);
-      alert("Failed to create task. Please try again.");
+      setError("Failed to create task. Please try again.");
     }
   };
 
@@ -147,9 +167,10 @@ function App() {
       if (selectedProjectId) {
         await loadTasks(selectedProjectId);
       }
+      showSuccess("Task updated successfully!");
     } catch (err: unknown) {
       console.error("Error updating task:", err);
-      alert("Failed to update task. Please try again.");
+      setError("Failed to update task. Please try again.");
     }
   };
 
@@ -163,11 +184,13 @@ function App() {
       if (selectedProjectId) {
         await loadProjects(selectedProjectId);
       }
+      showSuccess(`Task status updated to ${newStatus}!`);
     } catch (err: unknown) {
       console.error("Error toggling task status:", err);
       if (selectedProjectId) {
         await loadTasks(selectedProjectId);
       }
+      setError("Failed to update status.");
     }
   };
 
@@ -183,9 +206,10 @@ function App() {
         await loadTasks(selectedProjectId);
         await loadProjects(selectedProjectId);
       }
+      showSuccess("Task deleted successfully.");
     } catch (err: unknown) {
       console.error("Error deleting task:", err);
-      alert("Failed to delete task. Please try again.");
+      setError("Failed to delete task. Please try again.");
     }
   };
 
@@ -197,78 +221,128 @@ function App() {
 
   return (
     <div className="flex min-h-screen bg-slate-50/70 font-sans text-slate-800 antialiased">
+      {/* Toast Notification */}
+      {successMessage && (
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 shadow-md animate-in slide-in-from-top-4 duration-200">
+          <CheckCircle2 size={18} className="text-emerald-600" />
+          <span>{successMessage}</span>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="ml-2 rounded-md p-0.5 text-emerald-600 hover:bg-emerald-100"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Sidebar Navigation */}
       <Sidebar
         projects={projects}
         selectedProjectId={selectedProjectId}
         onSelectProject={setSelectedProjectId}
         onCreateProject={() => setIsCreateProjectOpen(true)}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto px-6 py-7 md:px-10">
-        <div className="mx-auto max-w-5xl">
-          {error && (
-            <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50/70 px-4 py-3 text-sm text-rose-700">
-              <AlertCircle size={17} className="shrink-0 text-rose-500" />
-              <span>{error}</span>
-            </div>
-          )}
+      <div className="flex flex-1 flex-col min-w-0">
+        {/* Mobile Top Header */}
+        <header className="flex items-center justify-between border-b border-slate-200/80 bg-white px-4 py-3 md:hidden">
+          <button
+            onClick={() => setIsMobileSidebarOpen(true)}
+            className="flex items-center gap-2 rounded-lg p-2 text-slate-600 hover:bg-slate-100"
+            title="Open Projects Menu"
+          >
+            <Menu size={20} />
+            <span className="text-sm font-medium">Projects</span>
+          </button>
 
-          {isLoadingProjects ? (
-            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3">
-              <Loader2 className="animate-spin text-indigo-600" size={28} />
-              <p className="text-sm font-medium text-slate-400">
-                Loading workspace...
-              </p>
-            </div>
-          ) : selectedProject ? (
-            <div className="space-y-6">
-              <ProjectHeader
-                name={selectedProject.name}
-                description={selectedProject.description}
-                totalTasks={totalTasks}
-                completedTasks={completedTasks}
-                inProgressTasks={inProgressTasks}
-                pendingTasks={pendingTasks}
-                onAddTask={() => setIsCreateTaskOpen(true)}
-                onDeleteProject={handleDeleteProject}
-              />
+          <span className="text-sm font-semibold text-slate-800 truncate">
+            {selectedProject ? selectedProject.name : "Task Management"}
+          </span>
 
-              {isLoadingTasks ? (
-                <div className="flex min-h-[30vh] items-center justify-center">
-                  <Loader2 className="animate-spin text-indigo-500" size={24} />
+          <button
+            onClick={() => setIsCreateProjectOpen(true)}
+            className="rounded-lg bg-indigo-600 p-2 text-white shadow-2xs hover:bg-indigo-700"
+            title="Create Project"
+          >
+            <FolderPlus size={18} />
+          </button>
+        </header>
+
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 md:px-10 md:py-8">
+          <div className="mx-auto max-w-5xl">
+            {error && (
+              <div className="mb-6 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50/70 px-4 py-3 text-sm text-rose-700">
+                <div className="flex items-center gap-2.5">
+                  <AlertCircle size={17} className="shrink-0 text-rose-500" />
+                  <span>{error}</span>
                 </div>
-              ) : (
-                <TaskList
-                  tasks={tasks}
-                  onEditTask={(task) => setEditingTask(task)}
-                  onDeleteTask={handleDeleteTask}
-                  onStatusChange={handleStatusChange}
-                />
-              )}
-            </div>
-          ) : (
-            <div className="flex min-h-[65vh] flex-col items-center justify-center text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 shadow-2xs">
-                <FolderPlus size={28} />
+                <button
+                  onClick={() => setError(null)}
+                  className="rounded-md p-1 text-rose-500 hover:bg-rose-100"
+                >
+                  <X size={14} />
+                </button>
               </div>
-              <h2 className="mt-4 text-base font-semibold text-slate-800">
-                No project selected
-              </h2>
-              <p className="mt-1 text-xs text-slate-400 max-w-sm">
-                Get started by creating your first project to organize and track tasks.
-              </p>
-              <button
-                onClick={() => setIsCreateProjectOpen(true)}
-                className="mt-5 flex items-center gap-2 rounded-xl bg-indigo-600 px-4.5 py-2 text-sm font-medium text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 transition"
-              >
-                Create First Project
-              </button>
-            </div>
-          )}
-        </div>
-      </main>
+            )}
+
+            {isLoadingProjects ? (
+              <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3">
+                <Loader2 className="animate-spin text-indigo-600" size={28} />
+                <p className="text-sm font-medium text-slate-400">
+                  Loading workspace...
+                </p>
+              </div>
+            ) : selectedProject ? (
+              <div className="space-y-6">
+                <ProjectHeader
+                  name={selectedProject.name}
+                  description={selectedProject.description}
+                  totalTasks={totalTasks}
+                  completedTasks={completedTasks}
+                  inProgressTasks={inProgressTasks}
+                  pendingTasks={pendingTasks}
+                  onAddTask={() => setIsCreateTaskOpen(true)}
+                  onDeleteProject={handleDeleteProject}
+                />
+
+                {isLoadingTasks ? (
+                  <div className="flex min-h-[30vh] items-center justify-center">
+                    <Loader2 className="animate-spin text-indigo-500" size={24} />
+                  </div>
+                ) : (
+                  <TaskList
+                    tasks={tasks}
+                    onEditTask={(task) => setEditingTask(task)}
+                    onDeleteTask={handleDeleteTask}
+                    onStatusChange={handleStatusChange}
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="flex min-h-[65vh] flex-col items-center justify-center text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 shadow-2xs">
+                  <FolderPlus size={28} />
+                </div>
+                <h2 className="mt-4 text-base font-semibold text-slate-800">
+                  No project selected
+                </h2>
+                <p className="mt-1 text-xs text-slate-400 max-w-sm">
+                  Get started by creating your first project to organize and track tasks.
+                </p>
+                <button
+                  onClick={() => setIsCreateProjectOpen(true)}
+                  className="mt-5 flex items-center gap-2 rounded-xl bg-indigo-600 px-4.5 py-2 text-sm font-medium text-white shadow-sm shadow-indigo-200 hover:bg-indigo-700 transition"
+                >
+                  Create First Project
+                </button>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
 
       {/* Modals */}
       <CreateProjectModal

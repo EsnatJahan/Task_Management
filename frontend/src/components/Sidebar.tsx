@@ -1,4 +1,4 @@
-import { Folder, Plus, CheckSquare } from "lucide-react";
+import { Folder, Plus, CheckSquare, X } from "lucide-react";
 import type { Project } from "../api";
 
 interface SidebarProps {
@@ -6,6 +6,8 @@ interface SidebarProps {
   selectedProjectId: number | null;
   onSelectProject: (id: number) => void;
   onCreateProject: () => void;
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 // Gentle pastel folder color cycle
@@ -23,20 +25,34 @@ function Sidebar({
   selectedProjectId,
   onSelectProject,
   onCreateProject,
+  isMobileOpen = false,
+  onCloseMobile,
 }: SidebarProps) {
-  return (
-    <aside className="flex w-64 flex-col border-r border-slate-200/80 bg-white">
+  const content = (
+    <aside className="flex h-full w-64 flex-col border-r border-slate-200/80 bg-white">
       {/* Brand Header */}
-      <div className="flex items-center gap-3 border-b border-slate-100 p-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white shadow-sm shadow-indigo-200">
-          <CheckSquare size={19} />
+      <div className="flex items-center justify-between border-b border-slate-100 p-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white shadow-sm shadow-indigo-200">
+            <CheckSquare size={19} />
+          </div>
+          <div>
+            <h1 className="text-base font-semibold text-slate-800 tracking-tight">
+              TaskFlow
+            </h1>
+            <p className="text-xs text-slate-400">Workspace</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-base font-semibold text-slate-800 tracking-tight">
-            Task Management
-          </h1>
-          <p className="text-xs text-slate-400">Workspace</p>
-        </div>
+
+        {/* Mobile close button */}
+        {onCloseMobile && (
+          <button
+            onClick={onCloseMobile}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 md:hidden"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       {/* Projects List */}
@@ -63,7 +79,10 @@ function Sidebar({
             return (
               <button
                 key={project.id}
-                onClick={() => onSelectProject(project.id)}
+                onClick={() => {
+                  onSelectProject(project.id);
+                  if (onCloseMobile) onCloseMobile();
+                }}
                 className={`group flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
                   isSelected
                     ? "bg-indigo-50 text-indigo-700 font-medium"
@@ -114,6 +133,26 @@ function Sidebar({
         </button>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <div className="hidden md:flex md:h-screen md:sticky md:top-0">
+        {content}
+      </div>
+
+      {/* Mobile Drawer Backdrop and Sidebar */}
+      {isMobileOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-2xs transition-opacity"
+            onClick={onCloseMobile}
+          />
+          <div className="relative z-10 h-full">{content}</div>
+        </div>
+      )}
+    </>
   );
 }
 
